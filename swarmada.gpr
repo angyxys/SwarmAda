@@ -1,0 +1,33 @@
+with "config/swarmada_config.gpr";
+project Swarmada is
+   type OS_Type is ("windows", "linux", "macos", "others");
+   OS : OS_Type := external ("OS", "linux");
+
+   for Source_Dirs use ("src/", "config/");
+   for Object_Dir use "obj/" & Swarmada_Config.Build_Profile;
+   for Create_Missing_Dirs use "True";
+   for Exec_Dir use "bin";
+   for Main use ("swarmada.adb");
+
+   package Linker is
+      case OS is
+         when "windows" =>
+            for Default_Switches ("Ada") use ("-lopengl32", "-lglu32", "-lfreeglut");
+         when others =>
+            for Default_Switches ("Ada") use ("-lGL", "-lGLU", "-lglut", "-llua5.3");
+      end case;
+   end Linker;
+
+   package Compiler is
+      for Default_Switches ("Ada") use Swarmada_Config.Ada_Compiler_Switches;
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+   end Binder;
+
+   package Install is
+      for Artifacts (".") use ("share");
+   end Install;
+
+end Swarmada;

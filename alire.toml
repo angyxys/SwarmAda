@@ -1,0 +1,15 @@
+name = "swarmada"
+description = "Swarm Ada"
+version = "0.1.0-dev"
+
+authors = ["A. O."]
+maintainers = ["angyxys@gmail.com"]
+maintainers-logins = ["angyxys"]
+
+executables = ["swarmada"]
+[[depends-on]]
+globe_3d = "*"
+[[pins]]
+globe_3d = { path='../globe-3d' }
+[[depends-on]]
+ada_lua = "~0.1.0"
