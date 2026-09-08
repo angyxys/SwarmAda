@@ -70,10 +70,12 @@ The included demo shows a single cube moving in a circular path controlled by a 
 - **Ubuntu 22.04+** or **WSL2** with Ubuntu
 - **Ada compiler** (GNAT) via Alire
 - **OpenGL** libraries and GLUT
+- **Lua 5.3** development libraries
 
 ### Installation
 
-1. **Install system dependencies**:
+#### 1. Install system dependencies
+
 ```bash
 sudo apt update
 sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev \
@@ -81,20 +83,62 @@ sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev \
                      libxcursor-dev liblua5.3-dev
 ```
 
-2. **Install Alire** (Ada package manager):
+#### 2. Install Alire (Ada package manager)
+
 ```bash
 wget https://github.com/alire-project/alire/releases/download/v2.0.2/alr-2.0.2-bin-x86_64-linux.zip
 unzip alr-2.0.2-bin-x86_64-linux.zip
 sudo mv bin/alr /usr/local/bin/
 ```
 
-3. **Clone the repository**:
+#### 3. Install GLOBE_3D (Required dependency)
+
+**Note**: GLOBE_3D is not available as an Alire package (it's marked as `unavailable`). You need to install it manually:
+
 ```bash
-git clone https://github.com/yourusername/swarmada.git
+# Clone the repository
+cd ~/
+git clone https://github.com/zertovitch/globe-3d.git
+
+# Compile it for Linux
+cd globe-3d
+export G3D_OS=linux
+gprbuild -P globe_3d.gpr
+```
+
+#### 4. Clone and configure SwarmAda
+
+```bash
+git clone https://github.com/angyxys/swarmada.git
 cd swarmada
 ```
 
-4. **Build and run**:
+#### 5. Configure the GLOBE_3D dependency in `alire.toml`
+
+Add the following configuration to your `alire.toml` file. Alire will automatically link GLOBE_3D as a local dependency:
+
+```toml
+# Add this section to your alire.toml
+[[pins]]
+globe_3d = { path = "../globe-3d" }
+
+[dependencies]
+globe_3d = "*"
+ada_lua = "*"  # Lua binding for Ada
+```
+
+**Alternative**: Use the `alr with` command to add the dependency:
+
+```bash
+# This command will automatically add the pins and dependencies to alire.toml
+# Note: --use tells alr to use the local path
+alr with --use ../globe-3d globe_3d
+```
+
+If `--use` is not supported in your version, manually edit `alire.toml` as shown above.
+
+#### 6. Build and run
+
 ```bash
 export G3D_OS=linux
 alr clean
@@ -198,6 +242,8 @@ Lua_API.Load_Script ("scripts/my_behavior.lua");
 |-------|----------|
 | `liblua` not found | Install: `sudo apt install liblua5.3-dev` |
 | OpenGL errors | Install: `sudo apt install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev` |
+| GLOBE_3D not found | Ensure you cloned GLOBE_3D to `../globe-3d` relative to the project |
+| `GLOBE_3D.DATA_FILE_NOT_FOUND` | The demo uses textures from a zip file. For a simple cube, this can be ignored. |
 | Window doesn't appear (WSL) | Run VcXsrv and set `DISPLAY` |
 | `'update' not found` | Ensure script returns the function with `return update` |
 | Compilation fails | Run `alr clean` and rebuild |
