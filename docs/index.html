@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SwarmAda — 3D Drone Swarm Simulator</title>
+<meta name="description" content="SwarmAda is a real-time 3D drone swarm simulation framework combining Ada's performance and safety with Lua's scripting flexibility, built on GLOBE_3D." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230ea5e9'/%3E%3Ccircle cx='9' cy='22' r='3' fill='white'/%3E%3Ccircle cx='23' cy='22' r='3' fill='%2322d3ee'/%3E%3Ccircle cx='16' cy='9' r='3' fill='white'/%3E%3Cpath d='M9 22 16 9 23 22 9 22Z' stroke='white' stroke-width='1.4' fill='none' opacity='.9'/%3E%3C/svg%3E" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        },
+        colors: {
+          ink: {
+            950: '#0a1122',
+            900: '#0f1b33',
+          },
+        },
+        boxShadow: {
+          glow: '0 0 0 1px rgba(14,165,233,0.10), 0 12px 34px -12px rgba(14,165,233,0.35)',
+          card: '0 1px 2px 0 rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { scrollbar-gutter: stable; }
+  body {
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(1100px 520px at 12% -10%, rgba(56,189,248,0.16), transparent 60%),
+      radial-gradient(900px 480px at 88% 6%, rgba(34,211,238,0.14), transparent 55%),
+      radial-gradient(1100px 620px at 50% 105%, rgba(14,165,233,0.08), transparent 60%);
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #7dd3fc; }
+
+  .grid-fade {
+    background-image: linear-gradient(rgba(15,23,42,0.05) 1px, transparent 1px),
+                       linear-gradient(90deg, rgba(15,23,42,0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 15%, black 40%, transparent 80%);
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 15%, black 40%, transparent 80%);
+  }
+  .text-gradient {
+    background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 45%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .btn-glow {
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset, 0 10px 24px -8px rgba(14,165,233,0.55);
+  }
+  code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .copy-btn { transition: background-color .15s ease, color .15s ease; }
+  .anchor-offset { scroll-margin-top: 88px; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+
+  .roadmap-line {
+    background: linear-gradient(to bottom, rgba(6,182,212,0.55), rgba(56,189,248,0.08));
+  }
+</style>
+</head>
+<body class="font-sans text-slate-600 antialiased">
+
+<!-- ===================== NAVBAR ===================== -->
+<header id="navbar" class="fixed top-0 inset-x-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="#top" class="flex items-center gap-2.5 shrink-0">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0ea5e9"/>
+          <circle cx="9" cy="22" r="3" fill="#ffffff"/>
+          <circle cx="23" cy="22" r="3" fill="#e0fbff"/>
+          <circle cx="16" cy="9" r="3" fill="#ffffff"/>
+          <path d="M9 22 16 9 23 22 9 22Z" stroke="#ffffff" stroke-width="1.3" opacity="0.9"/>
+        </svg>
+        <span class="text-slate-900 font-bold text-lg tracking-tight">SwarmAda</span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-1">
+        <a href="#overview" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition">Overview</a>
+        <a href="#features" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition">Features</a>
+        <a href="#architecture" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition">Architecture</a>
+        <a href="#quickstart" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition">Quick Start</a>
+        <a href="#roadmap" class="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition">Roadmap</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/angyxys/swarmada" target="_blank" rel="noopener"
+           class="hidden sm:inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.98 5.24.98 11.52c0 4.94 3.2 9.13 7.65 10.6.56.1.76-.24.76-.54 0-.27-.01-1.16-.02-2.1-3.11.68-3.77-1.32-3.77-1.32-.5-1.28-1.23-1.62-1.23-1.62-1-.7.08-.68.08-.68 1.1.08 1.68 1.14 1.68 1.14.99 1.68 2.58 1.2 3.21.92.1-.72.39-1.2.7-1.47-2.48-.28-5.1-1.24-5.1-5.53 0-1.22.43-2.22 1.14-3-.11-.28-.5-1.42.11-2.96 0 0 .93-.3 3.05 1.14a10.6 10.6 0 0 1 5.56 0c2.12-1.44 3.05-1.14 3.05-1.14.61 1.54.22 2.68.11 2.96.71.78 1.14 1.78 1.14 3 0 4.3-2.63 5.24-5.13 5.52.4.35.76 1.03.76 2.08 0 1.5-.01 2.71-.01 3.08 0 .3.2.65.77.54A10.53 10.53 0 0 0 23.02 11.5C23.02 5.24 18.27.5 12 .5Z"/></svg>
+          <span>GitHub</span>
+        </a>
+        <a href="#quickstart" class="hidden sm:inline-flex items-center rounded-lg bg-gradient-to-r from-sky-500 to-cyan-500 px-3.5 py-1.5 text-sm font-semibold text-white hover:opacity-90 transition btn-glow">
+          Get Started
+        </a>
+        <button id="menu-btn" class="md:hidden p-2 rounded-md text-slate-600 hover:bg-slate-100" aria-label="Open menu">
+          <svg id="icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <svg id="icon-close" class="hidden" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- mobile menu -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md">
+    <nav class="px-4 py-3 flex flex-col gap-1">
+      <a href="#overview" class="mobile-link px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">Overview</a>
+      <a href="#features" class="mobile-link px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">Features</a>
+      <a href="#architecture" class="mobile-link px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">Architecture</a>
+      <a href="#quickstart" class="mobile-link px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">Quick Start</a>
+      <a href="#roadmap" class="mobile-link px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">Roadmap</a>
+      <a href="https://github.com/angyxys/swarmada" target="_blank" rel="noopener" class="px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ===================== HERO ===================== -->
+<main id="top">
+<section class="relative overflow-hidden pt-36 pb-20 sm:pt-40 sm:pb-28">
+  <div class="absolute inset-0 grid-fade pointer-events-none"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col items-center text-center">
+
+      <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-cyan-500"></span> Ada 3.0
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">Lua 5.3</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">Alire 2.0</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">GPLv3</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 max-w-4xl">
+        Real-time 3D <span class="text-gradient">drone&nbsp;swarm</span> simulation
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg text-slate-500">
+        <span class="text-slate-900 font-semibold">SwarmAda</span> combines the robustness and performance of
+        <span class="text-sky-600 font-medium">Ada</span> with the flexibility of <span class="text-cyan-600 font-medium">Lua</span> scripting —
+        rendered in real time with GLOBE_3D. Define swarm behaviors without ever touching the core engine.
+      </p>
+
+      <div class="mt-9 flex flex-col sm:flex-row items-center gap-3">
+        <a href="#quickstart" class="btn-glow inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition">
+          Get Started
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="https://github.com/angyxys/swarmada" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.98 5.24.98 11.52c0 4.94 3.2 9.13 7.65 10.6.56.1.76-.24.76-.54 0-.27-.01-1.16-.02-2.1-3.11.68-3.77-1.32-3.77-1.32-.5-1.28-1.23-1.62-1.23-1.62-1-.7.08-.68.08-.68 1.1.08 1.68 1.14 1.68 1.14.99 1.68 2.58 1.2 3.21.92.1-.72.39-1.2.7-1.47-2.48-.28-5.1-1.24-5.1-5.53 0-1.22.43-2.22 1.14-3-.11-.28-.5-1.42.11-2.96 0 0 .93-.3 3.05 1.14a10.6 10.6 0 0 1 5.56 0c2.12-1.44 3.05-1.14 3.05-1.14.61 1.54.22 2.68.11 2.96.71.78 1.14 1.78 1.14 3 0 4.3-2.63 5.24-5.13 5.52.4.35.76 1.03.76 2.08 0 1.5-.01 2.71-.01 3.08 0 .3.2.65.77.54A10.53 10.53 0 0 0 23.02 11.5C23.02 5.24 18.27.5 12 .5Z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <!-- Demo GIF -->
+      <div class="mt-16 w-full max-w-3xl animate-float">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-glow overflow-hidden">
+          <div class="flex items-center gap-1.5 px-4 py-3 border-b border-slate-100 bg-slate-50">
+            <span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-yellow-400"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-green-400"></span>
+            <span class="ml-3 text-xs text-slate-400 font-mono">swarmada — GLOBE_3D viewport</span>
+          </div>
+          <img src="swarmada-demo.gif" alt="SwarmAda demo: a cube controlled by a Lua script moving in a circular path inside the GLOBE_3D viewport" class="w-full block" loading="lazy" />
+        </div>
+        <p class="mt-3 text-xs text-slate-400">Live demo — object position &amp; rotation driven every frame by a Lua script.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OVERVIEW / STATS ===================== -->
+<section id="overview" class="anchor-offset py-20 border-t border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid lg:grid-cols-2 gap-14 items-center">
+      <div>
+        <span class="text-xs font-semibold tracking-widest text-cyan-600 uppercase">Overview</span>
+        <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">A proof-of-concept for multi‑agent systems</h2>
+        <p class="mt-5 text-slate-500 leading-relaxed">
+          SwarmAda is a real-time 3D swarm simulation framework built to explore how a statically-typed,
+          memory-safe systems language can drive high-performance rendering and physics, while a lightweight
+          scripting layer stays free to iterate on behaviors.
+        </p>
+        <ul class="mt-6 space-y-3 text-sm text-slate-600">
+          <li class="flex gap-3"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"></span> Ada as the core engine for 3D rendering and physics</li>
+          <li class="flex gap-3"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"></span> A clean API exposed to Lua for real-time object control</li>
+          <li class="flex gap-3"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"></span> Ada's safety combined with Lua's agility for swarm behaviors</li>
+          <li class="flex gap-3"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"></span> Configurable behaviors without ever recompiling the engine</li>
+        </ul>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+          <p class="text-3xl font-extrabold text-gradient">60+ FPS</p>
+          <p class="mt-1 text-sm text-slate-500">Real-time object updates</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+          <p class="text-3xl font-extrabold text-gradient">2</p>
+          <p class="mt-1 text-sm text-slate-500">Languages, one engine</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+          <p class="text-3xl font-extrabold text-gradient">OpenGL</p>
+          <p class="mt-1 text-sm text-slate-500">Rendering via GLOBE_3D</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+          <p class="text-3xl font-extrabold text-gradient">GPLv3</p>
+          <p class="mt-1 text-sm text-slate-500">Free &amp; open source</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FEATURES ===================== -->
+<section id="features" class="anchor-offset py-20 border-t border-slate-200 bg-slate-50/70">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-semibold tracking-widest text-cyan-600 uppercase">Features</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Everything you need to prototype a swarm</h2>
+    </div>
+
+    <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5v9l-9 5-9-5v-9l9-5 9 5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 7.5 12 12.5l8.5-5M12 12.5V22"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">3D Rendering</h3>
+        <p class="mt-2 text-sm text-slate-500">Powered by GLOBE_3D, an OpenGL-based engine, for real-time visualization of the simulation.</p>
+      </div>
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m10 20 4-16M6 8 2 12l4 4M18 8l4 4-4 4"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">Lua Scripting</h3>
+        <p class="mt-2 text-sm text-slate-500">Define drone behaviors in Lua with full control — no recompilation required.</p>
+      </div>
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">Real-time Control</h3>
+        <p class="mt-2 text-sm text-slate-500">Objects are updated at 60+ FPS via direct function calls into the Lua VM.</p>
+      </div>
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">Lightweight</h3>
+        <p class="mt-2 text-sm text-slate-500">Minimal dependencies. Runs on Linux, including WSL2 with an X server.</p>
+      </div>
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">Extensible</h3>
+        <p class="mt-2 text-sm text-slate-500">Adding a new Ada function to the Lua API takes three small, well-documented steps.</p>
+      </div>
+      <!-- card -->
+      <div class="group rounded-xl border border-slate-200 bg-white p-6 shadow-card hover:border-cyan-300 transition">
+        <div class="h-11 w-11 rounded-lg bg-gradient-to-br from-sky-50 to-cyan-50 flex items-center justify-center text-sky-600 group-hover:text-cyan-600 transition">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.25C10.5 4.5 8 4 6 5c-2.3 1.15-3 4-1.5 6.5C6 14.5 12 19 12 19s6-4.5 7.5-7.5C21 9 20.3 6.15 18 5c-2-1-4.5-.5-6 1.25Z"/></svg>
+        </div>
+        <h3 class="mt-4 font-semibold text-slate-900">Educational</h3>
+        <p class="mt-2 text-sm text-slate-500">A clean, small codebase — ideal for learning Ada/Lua interop and multi-agent design.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ARCHITECTURE ===================== -->
+<section id="architecture" class="anchor-offset py-20 border-t border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-semibold tracking-widest text-cyan-600 uppercase">Architecture</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Three layers, one clean boundary</h2>
+      <p class="mt-4 text-slate-500">Lua scripts never touch the engine directly — everything flows through a small, explicit bridge.</p>
+    </div>
+
+    <div class="mt-14 max-w-3xl mx-auto space-y-4">
+
+      <div class="rounded-xl border border-cyan-200 bg-cyan-50/40 p-6 shadow-card">
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-cyan-500"></span>
+          <h3 class="font-semibold text-slate-900">Lua Scripts</h3>
+        </div>
+        <ul class="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-slate-600">
+          <li>• Behavior definitions</li>
+          <li>• Swarm algorithms (Boids, formations)</li>
+          <li>• Custom object control logic</li>
+        </ul>
+      </div>
+
+      <div class="flex justify-center">
+        <svg width="20" height="28" viewBox="0 0 20 28" fill="none" stroke="#06b6d4" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 2v20m0 0 6-6m-6 6-6-6"/></svg>
+      </div>
+
+      <div class="rounded-xl border border-sky-200 bg-sky-50/40 p-6 shadow-card">
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-sky-500"></span>
+          <h3 class="font-semibold text-slate-900">Lua Bridge</h3>
+        </div>
+        <ul class="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-slate-600">
+          <li>• Ada functions exposed to Lua</li>
+          <li>• Script loading and execution</li>
+          <li>• Function reference management</li>
+          <li>• Error handling</li>
+        </ul>
+      </div>
+
+      <div class="flex justify-center">
+        <svg width="20" height="28" viewBox="0 0 20 28" fill="none" stroke="#0284c7" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 2v20m0 0 6-6m-6 6-6-6"/></svg>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-card">
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+          <h3 class="font-semibold text-slate-900">Ada Core Engine</h3>
+        </div>
+        <ul class="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-slate-600">
+          <li>• GLOBE_3D rendering engine</li>
+          <li>• GLUT window management</li>
+          <li>• Object management (3D models)</li>
+          <li>• Camera control</li>
+          <li>• Lighting system</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- How it works code -->
+    <div class="mt-16">
+      <h3 class="text-center text-lg font-semibold text-slate-900">How it works</h3>
+      <div class="mt-8 grid lg:grid-cols-3 gap-5">
+
+        <div class="rounded-xl border border-slate-200 overflow-hidden shadow-card">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-ink-900">
+            <span class="text-xs font-mono text-slate-400">1. Ada exposes API</span>
+            <span class="text-[10px] font-mono uppercase text-sky-400">Ada</span>
+          </div>
+          <pre class="p-4 text-xs leading-relaxed overflow-x-auto bg-ink-950 text-slate-200"><code>Register_Function
+  (State, "set_position",
+   Set_Position_Wrapper'Access);
+Register_Function
+  (State, "set_rotation",
+   Set_Rotation_Wrapper'Access);
+Register_Function
+  (State, "get_position",
+   Get_Position_Wrapper'Access);</code></pre>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 overflow-hidden shadow-card">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-ink-900">
+            <span class="text-xs font-mono text-slate-400">2. Lua defines behavior</span>
+            <span class="text-[10px] font-mono uppercase text-cyan-400">Lua</span>
+          </div>
+          <pre class="p-4 text-xs leading-relaxed overflow-x-auto bg-ink-950 text-slate-200"><code>local angle = 0
+
+function update(dt)
+  angle = angle + dt * 0.5
+  local x = math.cos(angle) * 2.0
+  local z = math.sin(angle) * 2.0
+  set_position(x, 0.0, z)
+  set_rotation(0.0, angle*10, 0.0)
+end
+
+return update</code></pre>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 overflow-hidden shadow-card">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-ink-900">
+            <span class="text-xs font-mono text-slate-400">3. Ada runs it every frame</span>
+            <span class="text-[10px] font-mono uppercase text-sky-400">Ada</span>
+          </div>
+          <pre class="p-4 text-xs leading-relaxed overflow-x-auto bg-ink-950 text-slate-200"><code>procedure Update
+  (Delta_Time : Float) is
+begin
+  if Update_Ref /= 0 then
+    Push_Value (State, Update_Ref);
+    Push (State,
+      Lua_Float (Delta_Time));
+    PCall (State, 1, 0, 0);
+  end if;
+end Update;</code></pre>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== QUICK START ===================== -->
+<section id="quickstart" class="anchor-offset py-20 border-t border-slate-200 bg-slate-50/70">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-semibold tracking-widest text-cyan-600 uppercase">Quick Start</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Up and running in six steps</h2>
+      <p class="mt-4 text-slate-500">Tested on Ubuntu 22.04+ and WSL2. See the README for full troubleshooting.</p>
+    </div>
+
+    <ol class="mt-14 space-y-8">
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">1</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Install system dependencies</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>sudo apt update
+sudo apt install -y libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev \
+                     libx11-dev libxi-dev libxrandr-dev libxinerama-dev \
+                     libxcursor-dev liblua5.3-dev</code></pre>
+          </div>
+        </div>
+      </li>
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">2</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Install Alire (Ada package manager)</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>wget https://github.com/alire-project/alire/releases/download/v2.0.2/alr-2.0.2-bin-x86_64-linux.zip
+unzip alr-2.0.2-bin-x86_64-linux.zip
+sudo mv bin/alr /usr/local/bin/</code></pre>
+          </div>
+        </div>
+      </li>
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">3</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Clone &amp; build GLOBE_3D</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>cd ~/
+git clone https://github.com/zertovitch/globe-3d.git
+cd globe-3d
+export G3D_OS=linux
+gprbuild -P globe_3d.gpr</code></pre>
+          </div>
+          <p class="mt-2 text-xs text-slate-400">GLOBE_3D isn't published on Alire — it must be built manually and pinned as a local dependency.</p>
+        </div>
+      </li>
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">4</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Clone SwarmAda</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>git clone https://github.com/angyxys/swarmada.git
+cd swarmada</code></pre>
+          </div>
+        </div>
+      </li>
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">5</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Pin the GLOBE_3D dependency</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>alr with --use ../globe-3d globe_3d</code></pre>
+          </div>
+          <p class="mt-2 text-xs text-slate-400">Or edit <code class="text-cyan-600">alire.toml</code> manually — see the README for the exact <code class="text-cyan-600">[[pins]]</code> block.</p>
+        </div>
+      </li>
+
+      <li class="flex gap-5">
+        <span class="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white font-bold text-sm flex items-center justify-center">6</span>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-slate-900">Build &amp; run</h3>
+          <div class="mt-3 relative rounded-lg border border-slate-200 shadow-card overflow-hidden">
+            <button class="copy-btn absolute top-2.5 right-2.5 text-[11px] font-medium text-slate-300 hover:text-cyan-300 bg-white/10 hover:bg-white/20 rounded px-2 py-1">Copy</button>
+            <pre class="p-4 pr-16 text-xs overflow-x-auto bg-ink-950 text-slate-200"><code>alr clean
+alr build
+./bin/swarmada</code></pre>
+          </div>
+          <p class="mt-2 text-xs text-slate-400">On WSL, run an X server (e.g. VcXsrv) and export <code class="text-cyan-600">DISPLAY</code> beforehand.</p>
+        </div>
+      </li>
+
+    </ol>
+  </div>
+</section>
+
+<!-- ===================== ROADMAP ===================== -->
+<section id="roadmap" class="anchor-offset py-20 border-t border-slate-200">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="text-xs font-semibold tracking-widest text-cyan-600 uppercase">Roadmap</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Where SwarmAda is headed</h2>
+      <p class="mt-4 text-slate-500">From a single scripted cube to full swarm algorithms and tooling.</p>
+    </div>
+
+    <div class="mt-14 relative pl-10">
+      <div class="absolute left-[15px] top-1 bottom-1 w-px roadmap-line"></div>
+
+      <!-- done -->
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-cyan-50 border border-cyan-300 flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </span>
+        <p class="font-medium text-slate-900">Basic 3D rendering with GLOBE_3D</p>
+        <p class="text-xs text-cyan-700 mt-0.5">Shipped</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-cyan-50 border border-cyan-300 flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </span>
+        <p class="font-medium text-slate-900">Lua integration with Ada</p>
+        <p class="text-xs text-cyan-700 mt-0.5">Shipped</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-cyan-50 border border-cyan-300 flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </span>
+        <p class="font-medium text-slate-900">Real-time object control via Lua</p>
+        <p class="text-xs text-cyan-700 mt-0.5">Shipped</p>
+      </div>
+
+      <!-- planned -->
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">Multiple objects (drones)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">Swarm algorithms (Boids)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">Keyboard / mouse controls</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">GUI for configuration</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+      <div class="relative pb-7">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">Save / load swarm configurations</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+      <div class="relative">
+        <span class="absolute -left-10 top-0.5 h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+        </span>
+        <p class="font-medium text-slate-700">Performance optimization</p>
+        <p class="text-xs text-slate-400 mt-0.5">Planned</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CTA ===================== -->
+<section class="py-20 border-t border-slate-200 bg-slate-50/70">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900">Contributions are welcome</h2>
+    <p class="mt-4 text-slate-500 max-w-xl mx-auto">Fork the repo, open an issue to discuss ideas, or submit a pull request. For major changes, please open an issue first.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="https://github.com/angyxys/swarmada" target="_blank" rel="noopener" class="btn-glow inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition">Star on GitHub</a>
+      <a href="https://ko-fi.com/angyxys" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">☕ Support on Ko-fi</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="border-t border-slate-200 py-12 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div class="flex items-center gap-2.5">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0ea5e9"/>
+          <circle cx="9" cy="22" r="3" fill="#ffffff"/>
+          <circle cx="23" cy="22" r="3" fill="#e0fbff"/>
+          <circle cx="16" cy="9" r="3" fill="#ffffff"/>
+          <path d="M9 22 16 9 23 22 9 22Z" stroke="#ffffff" stroke-width="1.3" opacity="0.9"/>
+        </svg>
+        <span class="text-slate-900 font-bold">SwarmAda</span>
+        <span class="text-slate-400 text-sm">— Where Ada's reliability meets Lua's flexibility.</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">
+        <a href="https://github.com/angyxys/swarmada" target="_blank" rel="noopener" class="hover:text-cyan-600 transition">GitHub</a>
+        <a href="https://github.com/angyxys/swarmada/blob/master/LICENSE" target="_blank" rel="noopener" class="hover:text-cyan-600 transition">License (GPLv3)</a>
+        <a href="https://www.adacore.com/" target="_blank" rel="noopener" class="hover:text-cyan-600 transition">AdaCore</a>
+        <a href="https://github.com/zertovitch/globe-3d" target="_blank" rel="noopener" class="hover:text-cyan-600 transition">GLOBE_3D</a>
+        <a href="https://www.lua.org/" target="_blank" rel="noopener" class="hover:text-cyan-600 transition">Lua</a>
+      </div>
+    </div>
+    <p class="mt-8 text-xs text-slate-400">© 2026 A. O. (angyxys) — Licensed under the GNU General Public License v3.0.</p>
+  </div>
+</footer>
+
+<script>
+  // Mobile menu toggle
+  const menuBtn = document.getElementById('menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('icon-open');
+  const iconClose = document.getElementById('icon-close');
+
+  menuBtn.addEventListener('click', () => {
+    const isHidden = mobileMenu.classList.contains('hidden');
+    mobileMenu.classList.toggle('hidden');
+    iconOpen.classList.toggle('hidden', isHidden);
+    iconClose.classList.toggle('hidden', !isHidden);
+  });
+
+  document.querySelectorAll('.mobile-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      mobileMenu.classList.add('hidden');
+      iconOpen.classList.remove('hidden');
+      iconClose.classList.add('hidden');
+    });
+  });
+
+  // Copy-to-clipboard for code blocks
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const codeEl = btn.parentElement.querySelector('code');
+      const text = codeEl ? codeEl.innerText : '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('text-cyan-300');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('text-cyan-300');
+        }, 1600);
+      } catch (e) {
+        btn.textContent = 'Press Ctrl+C';
+      }
+    });
+  });
+</script>
+</body>
+</html>
