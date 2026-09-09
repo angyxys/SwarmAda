@@ -13,3 +13,6 @@ globe_3d = "*"
 globe_3d = { path='../globe-3d' }
 [[depends-on]]
 ada_lua = "~0.1.0"
+
+[gpr-set-externals]
+G3D_OS = "linux"

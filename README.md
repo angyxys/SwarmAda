@@ -31,7 +31,7 @@ Perfect for researchers, robotics enthusiasts, and anyone interested in multi-ag
 
 The included demo shows a single cube moving in a circular path controlled by a Lua script. The position and rotation are updated every frame via Lua function calls.
 
-![SwarmAda Demo](screenshots/demo.gif)
+![SwarmAda Demo](docs/swarmada-demo.gif)
 
 ## 🛠️ Architecture
 
@@ -139,11 +139,21 @@ If `--use` is not supported in your version, manually edit `alire.toml` as shown
 
 #### 6. Build and run
 
+`alire.toml` already sets the `G3D_OS=linux` scenario variable for GLOBE_3D via
+`[gpr-set-externals]`, so `alr build` picks the right (Linux) linker flags on
+its own — no manual `export` needed:
+
 ```bash
-export G3D_OS=linux
 alr clean
 alr build
 ./bin/swarmada
+```
+
+If you build with plain `gprbuild` instead of `alr` (e.g. while working
+directly on `globe-3d.gpr`), you still need to set it yourself:
+
+```bash
+export G3D_OS=linux
 ```
 
 ### For WSL Users
