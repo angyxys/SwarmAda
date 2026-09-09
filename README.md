@@ -257,7 +257,7 @@ swarmada/
 │   ├── lua_api.ads         # Lua binding specification
 │   └── lua_api.adb         # Lua binding implementation
 ├── scripts/
-│   └── mover.lua           # Example Lua script
+│   └── example.lua         # Example Lua script
 ├── alire.toml              # Alire project configuration
 ├── swarmada.gpr            # GNAT project file
 └── README.md               # This file

@@ -1,9 +1,8 @@
-print("Script de enjambre cargado")
+print("Swarm script loaded")
 
 local angle = 0
 
 function update(dt)
-    print("update llamado con dt=" .. dt)
     angle = angle + dt * 0.5
     local x = math.cos(angle) * 2.0
     local z = math.sin(angle) * 2.0

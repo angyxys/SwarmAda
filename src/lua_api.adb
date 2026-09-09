@@ -33,7 +33,7 @@ package body Lua_API is
       if not Is_Number (L, Index) then
          Push (L, "expected number");
          declare
-            Dummy : Integer := Error (L);  --  no retorna
+            Dummy : Integer := Error (L);
          begin
             return 0.0;
          end;
@@ -86,14 +86,12 @@ package body Lua_API is
       Register_Function (State, "get_position", Get_Position_Wrapper'Access);
       Register_Function (State, "set_position", Set_Position_Wrapper'Access);
       Register_Function (State, "set_rotation", Set_Rotation_Wrapper'Access);
-
-      Put_Line ("Lua inicializado correctamente.");
    end Initialize;
 
    procedure Load_Script (Filename : String) is
       Res : Lua_Return_Code;
       Top : Lua_Index;
-      Tipo : Lua_Type;
+      Kind : Lua_Type;
    begin
       Res := Load_File (State, Filename);
       if Res /= LUA_OK then
@@ -101,29 +99,22 @@ package body Lua_API is
             Msg : constant String := To_Ada (State, -1);
          begin
             Pop (State);
-            Put_Line ("Error al cargar script: " & Msg);
+            Put_Line ("Failed to load script: " & Msg);
          end;
       else
-         Put_Line ("Script cargado correctamente. Ejecutando...");
          if PCall (State, 0, 1, 0, 0, null) /= LUA_OK then
             declare
                Msg : constant String := To_Ada (State, -1);
             begin
                Pop (State);
-               Put_Line ("Error al ejecutar script: " & Msg);
+               Put_Line ("Failed to run script: " & Msg);
             end;
          else
-            Put_Line ("Script ejecutado correctamente.");
             Top := Get_Top (State);
-            Tipo := Get_Type (State, Top);
-            Put_Line ("Valor devuelto - Tipo: " & Lua_Type'Image (Tipo));
-            if Tipo = LUA_TFUNCTION then
-               Put_Line ("Es una función, guardando referencia...");
-               --  Guardar la referencia en la pila
+            Kind := Get_Type (State, Top);
+            if Kind = LUA_TFUNCTION then
                Update_Ref := Top;
-               Put_Line ("Referencia guardada en Update_Ref=" & Integer'Image (Update_Ref));
             else
-               Put_Line ("El valor devuelto NO es una función. Descartando...");
                Pop (State);
             end if;
          end if;
@@ -133,13 +124,10 @@ package body Lua_API is
    procedure Update (Delta_Time : Float) is
    begin
       if Update_Ref = 0 then
-         Put_Line ("Update_Ref no inicializada");
          return;
       end if;
 
-      --  Verificar que la función sigue en la pila
       if Get_Type (State, Update_Ref) = LUA_TFUNCTION then
-         --  Empujar la función a la cima (si no está ya)
          Push_Value (State, Update_Ref);
          Push (State, Lua_Float (Delta_Time));
          if PCall (State, 1, 0, 0) /= LUA_OK then
@@ -147,11 +135,10 @@ package body Lua_API is
                Msg : constant String := To_Ada (State, -1);
             begin
                Pop (State);
-               Put_Line ("Error al ejecutar update: " & Msg);
+               Put_Line ("Error running update: " & Msg);
             end;
          end if;
       else
-         Put_Line ("La referencia a update ya no es válida");
          Update_Ref := 0;
       end if;
    end Update;

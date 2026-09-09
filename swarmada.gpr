@@ -23,7 +23,7 @@ project Swarmada is
    end Compiler;
 
    package Binder is
-      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+      for Switches ("Ada") use ("-Es");
    end Binder;
 
    package Install is

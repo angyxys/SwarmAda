@@ -92,7 +92,6 @@ procedure Swarmada is
       end case;
    end Menu;
 
-   --  DECLARADO ALIASED
    Cube : aliased G3D.Object_3D (Max_Points => 8, Max_Faces => 6);
 
    procedure Create_Objects is
@@ -109,7 +108,6 @@ procedure Swarmada is
          f : Face_Type;
       begin
          f.P := P;
-         --  Usamos Colour_Only para evitar texturas externas
          f.skin := Colour_Only;
          f.colour := Colour;
          f.alpha := 1.0;
@@ -183,12 +181,7 @@ procedure Swarmada is
       end if;
       last_time := time_now;
 
-      --  Actualizar desde Lua
       Lua_API.Update (Float (elaps) * 0.001);
-      Ada.Text_IO.Put_Line ("Posición del cubo: " & 
-          Float'Image (Float (Cube.centre (0))) & ", " &
-          Float'Image (Float (Cube.centre (1))) & ", " &
-          Float'Image (Float (Cube.centre (2))));
 
       ego.clipper.view_direction := Transpose (ego.world_rotation) * (0.0, 0.0, -1.0);
 
@@ -240,35 +233,24 @@ procedure Swarmada is
    end Start_GLs;
 
 begin
-   Ada.Text_IO.Put_Line ("Iniciando...");
-   Ada.Text_IO.Put_Line ("Configurando datos globales...");
    G3D.Set_Global_Data_Name ("g3demo_global_resources.zip");
-   Ada.Text_IO.Put_Line ("Registrando texturas...");
    G3D.Textures.Register_Textures_From_Resources;
 
-   Ada.Text_IO.Put_Line ("Creando objetos...");
    Create_Objects;
 
-   --  Inicializar Lua
-   Ada.Text_IO.Put_Line ("Inicializando Lua...");
    Lua_API.Initialize (Cube'Unchecked_Access);
-   Lua_API.Load_Script ("scripts/mover.lua");
+   Lua_API.Load_Script ("scripts/example.lua");
 
-   Ada.Text_IO.Put_Line ("Iniciando GLUTs...");
    Start_GLUTs;
-   Ada.Text_IO.Put_Line ("Iniciando GLs...");
    Start_GLs;
-   Ada.Text_IO.Put_Line ("Reset eye...");
    Reset_Eye;
 
-   Ada.Text_IO.Put_Line ("Precargando texturas...");
    G3D.Textures.Check_All_Textures;
 
-   Ada.Text_IO.Put_Line ("Entrando en Main_Loop...");
    GLUT.MainLoop;
 
 exception
    when E : others =>
-      Ada.Text_IO.Put_Line ("Excepción capturada: " & Ada.Exceptions.Exception_Name (E));
-      Ada.Text_IO.Put_Line ("Mensaje: " & Ada.Exceptions.Exception_Message (E));
+      Ada.Text_IO.Put_Line ("Uncaught exception: " & Ada.Exceptions.Exception_Name (E));
+      Ada.Text_IO.Put_Line ("Message: " & Ada.Exceptions.Exception_Message (E));
 end Swarmada;
