@@ -4,6 +4,7 @@
 [![Lua](https://img.shields.io/badge/Lua-5.3-blueviolet.svg)](https://www.lua.org/)
 [![License](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE)
 [![Alire](https://img.shields.io/badge/Alire-2.0-orange.svg)](https://alire.ada.dev/)
+![Build](https://github.com/angyxys/SwarmAda/actions/workflows/build.yml/badge.svg)
 
 A real-time 3D swarm simulation framework combining the robustness and performance of **Ada** with the flexibility and simplicity of **Lua scripting**. Built with GLOBE_3D for 3D rendering.
 
